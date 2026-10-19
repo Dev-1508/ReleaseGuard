@@ -42,7 +42,7 @@ def run_evaluation(dataset_id, agent_version_id):
         input_text = test_case[1]
         expected_output = test_case[2]
 
-        actual_output = run_agent(input_text)
+        actual_output = run_agent(input_text,agent_version_id)
 
         score = evaluate_exact_match(
             expected_output,
