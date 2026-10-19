@@ -7,6 +7,13 @@ initialize_database()
 class Project(BaseModel):
     name:str
 
+class ProjectUpdate(BaseModel):
+    name: str
+
+class Dataset(BaseModel):
+    name: str
+    project_id: int
+
 @app.get("/")
 def home():
     return {"message": "ReleaseGuard is running"}
@@ -35,8 +42,7 @@ def get_projects():
 
     return {"projects": projects}
 
-class ProjectUpdate(BaseModel):
-    name: str
+
 
 @app.post("/projects")
 def create_project(project: Project):
@@ -152,3 +158,102 @@ def update_project(project_id: int, project: ProjectUpdate):
             "name": project.name
         }
     }
+
+@app.post("/datasets")
+def create_dataset(dataset: Dataset):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (dataset.project_id,)
+    )
+
+    project = cursor.fetchone()
+
+    if project is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found"
+        )
+
+    cursor.execute(
+        "INSERT INTO datasets (name, project_id) VALUES (?, ?)",
+        (dataset.name, dataset.project_id)
+    )
+
+    connection.commit()
+
+    dataset_id = cursor.lastrowid
+
+    connection.close()
+
+    return {
+        "message": "Dataset created",
+        "dataset": {
+            "id": dataset_id,
+            "name": dataset.name,
+            "project_id": dataset.project_id
+        }
+    }
+
+@app.get("/datasets")
+def get_datasets():
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("SELECT * FROM datasets")
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    datasets = []
+
+    for row in rows:
+        datasets.append({
+            "id": row[0],
+            "name": row[1],
+            "project_id": row[2]
+        })
+
+    return {"datasets": datasets}
+
+@app.get("/projects/{project_id}/datasets")
+def get_project_datasets(project_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    )
+
+    project = cursor.fetchone()
+
+    if project is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found"
+        )
+
+    cursor.execute(
+        "SELECT * FROM datasets WHERE project_id = ?",
+        (project_id,)
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    datasets = []
+
+    for row in rows:
+        datasets.append({
+            "id": row[0],
+            "name": row[1],
+            "project_id": row[2]
+        })
+
+    return {"datasets": datasets}
