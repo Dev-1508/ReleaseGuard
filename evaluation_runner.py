@@ -28,6 +28,8 @@ def run_evaluation(dataset_id):
 
     results = []
 
+    total_score = 0
+
     for test_case in test_cases:
         input_text = test_case[1]
         expected_output = test_case[2]
@@ -38,6 +40,7 @@ def run_evaluation(dataset_id):
             expected_output,
             actual_output
         )
+        total_score += score
 
         cursor.execute(
         """
@@ -67,6 +70,11 @@ def run_evaluation(dataset_id):
             "score": score
         })
 
+    if len(test_cases) > 0:
+        accuracy = total_score / len(test_cases)
+    else:
+        accuracy = 0
+
     cursor.execute(
     """
     UPDATE evaluation_runs
@@ -81,5 +89,6 @@ def run_evaluation(dataset_id):
 
     return {
     "evaluation_run_id": evaluation_run_id,
+    "accuracy": accuracy,
     "results": results
 }
