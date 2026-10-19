@@ -18,6 +18,9 @@ class TestCase(BaseModel):
     expected_output: str
     dataset_id: int
 
+class EvaluationRun(BaseModel):
+    dataset_id: int
+
 @app.get("/")
 def home():
     return {"message": "ReleaseGuard is running"}
@@ -348,3 +351,74 @@ def get_dataset_test_cases(dataset_id: int):
         })
 
     return {"test_cases": test_cases}
+
+@app.post("/evaluation-runs")
+def create_evaluation_run(evaluation_run: EvaluationRun):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM datasets WHERE id = ?",
+        (evaluation_run.dataset_id,)
+    )
+
+    dataset = cursor.fetchone()
+
+    if dataset is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+    cursor.execute(
+        """
+        INSERT INTO evaluation_runs (dataset_id, status)
+        VALUES (?, ?)
+        """,
+        (
+            evaluation_run.dataset_id,
+            "pending"
+        )
+    )
+
+    connection.commit()
+
+    evaluation_run_id = cursor.lastrowid
+
+    connection.close()
+
+    return {
+        "message": "Evaluation run created",
+        "evaluation_run": {
+            "id": evaluation_run_id,
+            "dataset_id": evaluation_run.dataset_id,
+            "status": "pending"
+        }
+    }
+
+@app.get("/evaluation-runs/{evaluation_run_id}")
+def get_evaluation_run(evaluation_run_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM evaluation_runs WHERE id = ?",
+        (evaluation_run_id,)
+    )
+
+    row = cursor.fetchone()
+
+    connection.close()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation run not found"
+        )
+
+    return {
+        "id": row[0],
+        "dataset_id": row[1],
+        "status": row[2]
+    }

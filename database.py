@@ -31,6 +31,15 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS evaluation_runs (
+    id INTEGER PRIMARY KEY,
+    dataset_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    FOREIGN KEY (dataset_id) REFERENCES datasets(id)
+    )
+    """)
+
     connection.commit()
     connection.close()
 
