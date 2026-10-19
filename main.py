@@ -580,6 +580,13 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     improvement = run_2_accuracy - run_1_accuracy
 
+    if run_2_accuracy > run_1_accuracy:
+        better_run = run_id_2
+    elif run_1_accuracy > run_2_accuracy:
+        better_run = run_id_1
+    else:
+        better_run = "tie"
+
     connection.close()
 
     return {
@@ -587,5 +594,6 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     "run_1_accuracy": run_1_accuracy,
     "run_2": run_id_2,
     "run_2_accuracy": run_2_accuracy,
-    "improvement": improvement
+    "improvement": improvement,
+    "better run": better_run
 }
