@@ -13,6 +13,10 @@ class ProjectUpdate(BaseModel):
 class Dataset(BaseModel):
     name: str
     project_id: int
+class TestCase(BaseModel):
+    input_text: str
+    expected_output: str
+    dataset_id: int
 
 @app.get("/")
 def home():
@@ -257,3 +261,90 @@ def get_project_datasets(project_id: int):
         })
 
     return {"datasets": datasets}
+
+@app.post("/test-cases")
+def create_test_case(test_case: TestCase):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM datasets WHERE id = ?",
+        (test_case.dataset_id,)
+    )
+
+    dataset = cursor.fetchone()
+
+    if dataset is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+    cursor.execute(
+        """
+        INSERT INTO test_cases (input_text, expected_output, dataset_id)
+        VALUES (?, ?, ?)
+        """,
+        (
+            test_case.input_text,
+            test_case.expected_output,
+            test_case.dataset_id
+        )
+    )
+
+    connection.commit()
+
+    test_case_id = cursor.lastrowid
+
+    connection.close()
+
+    return {
+        "message": "Test case created",
+        "test_case": {
+            "id": test_case_id,
+            "input_text": test_case.input_text,
+            "expected_output": test_case.expected_output,
+            "dataset_id": test_case.dataset_id
+        }
+    }
+
+@app.get("/datasets/{dataset_id}/test-cases")
+def get_dataset_test_cases(dataset_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM datasets WHERE id = ?",
+        (dataset_id,)
+    )
+
+    dataset = cursor.fetchone()
+
+    if dataset is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+    cursor.execute(
+        "SELECT * FROM test_cases WHERE dataset_id = ?",
+        (dataset_id,)
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    test_cases = []
+
+    for row in rows:
+        test_cases.append({
+            "id": row[0],
+            "input_text": row[1],
+            "expected_output": row[2],
+            "dataset_id": row[3]
+        })
+
+    return {"test_cases": test_cases}

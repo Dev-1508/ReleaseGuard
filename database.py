@@ -21,6 +21,16 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS test_cases (
+    id INTEGER PRIMARY KEY,
+    input_text TEXT NOT NULL,
+    expected_output TEXT NOT NULL,
+    dataset_id INTEGER NOT NULL,
+    FOREIGN KEY (dataset_id) REFERENCES datasets(id)
+    )
+    """)
+
     connection.commit()
     connection.close()
 
