@@ -529,3 +529,63 @@ def get_project_agent_versions(project_id: int):
         agent_versions.append({"id": row[0], "name": row[1], "project_id": row[2]})
 
     return {"agent_versions": agent_versions}
+
+@app.get("/comparisons/runs/{run_id_1}/{run_id_2}")
+def compare_evaluation_runs(run_id_1: int, run_id_2: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM evaluation_runs WHERE id = ?",
+        (run_id_1,)
+    )
+
+    run_1 = cursor.fetchone()
+
+    cursor.execute(
+        "SELECT * FROM evaluation_runs WHERE id = ?",
+        (run_id_2,)
+    )
+
+    run_2 = cursor.fetchone()
+
+    if run_1 is None or run_2 is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation run not found"
+        )
+
+    cursor.execute(
+    """
+    SELECT AVG(score)
+    FROM evaluation_results
+    WHERE evaluation_run_id = ?
+    """,
+    (run_id_1,)
+)
+
+    run_1_accuracy = cursor.fetchone()[0]
+
+    cursor.execute(
+    """
+    SELECT AVG(score)
+    FROM evaluation_results
+    WHERE evaluation_run_id = ?
+    """,
+    (run_id_2,)
+)
+
+    run_2_accuracy = cursor.fetchone()[0]
+
+    improvement = run_2_accuracy - run_1_accuracy
+
+    connection.close()
+
+    return {
+    "run_1": run_id_1,
+    "run_1_accuracy": run_1_accuracy,
+    "run_2": run_id_2,
+    "run_2_accuracy": run_2_accuracy,
+    "improvement": improvement
+}
