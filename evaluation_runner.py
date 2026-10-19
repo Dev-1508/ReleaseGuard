@@ -3,16 +3,24 @@ from evaluator import evaluate_exact_match
 from database import get_database_connection
 
 
-def run_evaluation(dataset_id):
+def run_evaluation(dataset_id, agent_version_id):
     connection = get_database_connection()
     cursor = connection.cursor()
 
     cursor.execute(
     """
-    INSERT INTO evaluation_runs (dataset_id, status)
-    VALUES (?, ?)
+    INSERT INTO evaluation_runs (
+    dataset_id,
+    status,
+    agent_version_id
+    )
+    VALUES (?, ?, ?)
     """,
-    (dataset_id, "running")
+    (
+    dataset_id,
+    "running",
+    agent_version_id
+)
 )
 
     connection.commit()

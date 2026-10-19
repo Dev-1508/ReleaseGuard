@@ -42,12 +42,27 @@ def initialize_database():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_runs (
-    id INTEGER PRIMARY KEY,
-    dataset_id INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    FOREIGN KEY (dataset_id) REFERENCES datasets(id)
+        id INTEGER PRIMARY KEY,
+        dataset_id INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        agent_version_id INTEGER,
+        FOREIGN KEY (dataset_id) REFERENCES datasets(id),
+        FOREIGN KEY (agent_version_id) REFERENCES agent_versions(id)
     )
     """)
+
+    cursor.execute("PRAGMA table_info(evaluation_runs)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "agent_version_id" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_runs ADD COLUMN agent_version_id INTEGER"
+        )
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (
