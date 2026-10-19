@@ -22,6 +22,10 @@ class TestCase(BaseModel):
 class EvaluationRun(BaseModel):
     dataset_id: int
 
+class AgentVersion(BaseModel):
+    name: str
+    project_id: int
+
 @app.get("/")
 def home():
     return {"message": "ReleaseGuard is running"}
@@ -519,4 +523,93 @@ def get_evaluation_summary(evaluation_run_id: int):
         "status": evaluation_run[2],
         "total_tests": len(rows),
         "accuracy": accuracy
+    }
+
+@app.post("/agent-versions")
+def create_agent_version(agent_version: AgentVersion):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (agent_version.project_id,)
+    )
+
+    project = cursor.fetchone()
+
+    if project is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found"
+        )
+
+    cursor.execute(
+        """
+        INSERT INTO agent_versions (name, project_id)
+        VALUES (?, ?)
+        """,
+        (
+            agent_version.name,
+            agent_version.project_id
+        )
+    )
+
+    connection.commit()
+
+    agent_version_id = cursor.lastrowid
+
+    connection.close()
+
+    return {
+        "message": "Agent version created",
+        "agent_version": {
+            "id": agent_version_id,
+            "name": agent_version.name,
+            "project_id": agent_version.project_id
+        }
+    }
+
+@app.get("/projects/{project_id}/agent-versions")
+def get_project_agent_versions(project_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    )
+
+    project = cursor.fetchone()
+
+    if project is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found"
+        )
+
+    cursor.execute(
+        """
+        SELECT * FROM agent_versions
+        WHERE project_id = ?
+        """,
+        (project_id,)
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    agent_versions = []
+
+    for row in rows:
+        agent_versions.append({
+            "id": row[0],
+            "name": row[1],
+            "project_id": row[2]
+        })
+
+    return {
+        "agent_versions": agent_versions
     }

@@ -13,6 +13,15 @@ def initialize_database():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS agent_versions (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        project_id INTEGER NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS datasets (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
