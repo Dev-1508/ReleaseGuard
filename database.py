@@ -14,3 +14,7 @@ def initialize_database():
 
     connection.commit()
     connection.close()
+
+def get_database_connection():
+    connection = sqlite3.connect("releaseguard.db")
+    return connection

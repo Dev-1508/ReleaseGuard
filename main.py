@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from database import initialize_database
-import sqlite3
+from database import initialize_database, get_database_connection
 
 app = FastAPI()
 initialize_database()
@@ -18,7 +17,7 @@ def health():
 
 @app.get("/projects")
 def get_projects():
-    connection = sqlite3.connect("releaseguard.db")
+    connection = get_database_connection()
     cursor = connection.cursor()
 
     cursor.execute("SELECT * FROM projects")
@@ -41,7 +40,7 @@ class ProjectUpdate(BaseModel):
 
 @app.post("/projects")
 def create_project(project: Project):
-    connection = sqlite3.connect("releaseguard.db")
+    connection = get_database_connection()
     cursor = connection.cursor()
 
     cursor.execute(
@@ -65,7 +64,7 @@ def create_project(project: Project):
 
 @app.get("/projects/{project_id}")
 def get_project(project_id: int):
-    connection = sqlite3.connect("releaseguard.db")
+    connection = get_database_connection()
     cursor = connection.cursor()
 
     cursor.execute(
@@ -90,7 +89,7 @@ def get_project(project_id: int):
 
 @app.delete("/projects/{project_id}")
 def delete_project(project_id: int):
-    connection = sqlite3.connect("releaseguard.db")
+    connection = get_database_connection()
     cursor = connection.cursor()
 
     cursor.execute(
@@ -121,7 +120,7 @@ def delete_project(project_id: int):
 
 @app.put("/projects/{project_id}")
 def update_project(project_id: int, project: ProjectUpdate):
-    connection = sqlite3.connect("releaseguard.db")
+    connection = get_database_connection()
     cursor = connection.cursor()
 
     cursor.execute(
