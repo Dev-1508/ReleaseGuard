@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from database import initialize_database, get_database_connection
+from evaluation_runner import run_evaluation
 
 app = FastAPI()
 initialize_database()
@@ -363,38 +364,21 @@ def create_evaluation_run(evaluation_run: EvaluationRun):
     )
 
     dataset = cursor.fetchone()
+    connection.close()
 
     if dataset is None:
-        connection.close()
         raise HTTPException(
             status_code=404,
             detail="Dataset not found"
         )
 
-    cursor.execute(
-        """
-        INSERT INTO evaluation_runs (dataset_id, status)
-        VALUES (?, ?)
-        """,
-        (
-            evaluation_run.dataset_id,
-            "pending"
-        )
+    evaluation = run_evaluation(
+        evaluation_run.dataset_id
     )
 
-    connection.commit()
-
-    evaluation_run_id = cursor.lastrowid
-
-    connection.close()
-
     return {
-        "message": "Evaluation run created",
-        "evaluation_run": {
-            "id": evaluation_run_id,
-            "dataset_id": evaluation_run.dataset_id,
-            "status": "pending"
-        }
+        "message": "Evaluation completed",
+        "evaluation": evaluation
     }
 
 @app.get("/evaluation-runs/{evaluation_run_id}")
