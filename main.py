@@ -471,3 +471,52 @@ def get_evaluation_results(evaluation_run_id: int):
         })
 
     return {"results": results}
+
+@app.get("/evaluation-runs/{evaluation_run_id}/summary")
+def get_evaluation_summary(evaluation_run_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM evaluation_runs WHERE id = ?",
+        (evaluation_run_id,)
+    )
+
+    evaluation_run = cursor.fetchone()
+
+    if evaluation_run is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation run not found"
+        )
+
+    cursor.execute(
+        """
+        SELECT score
+        FROM evaluation_results
+        WHERE evaluation_run_id = ?
+        """,
+        (evaluation_run_id,)
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    if len(rows) == 0:
+        accuracy = 0
+    else:
+        total_score = 0
+
+        for row in rows:
+            total_score += row[0]
+
+        accuracy = total_score / len(rows)
+
+    return {
+        "evaluation_run_id": evaluation_run_id,
+        "status": evaluation_run[2],
+        "total_tests": len(rows),
+        "accuracy": accuracy
+    }
