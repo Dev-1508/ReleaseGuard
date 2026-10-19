@@ -422,3 +422,68 @@ def get_evaluation_run(evaluation_run_id: int):
         "dataset_id": row[1],
         "status": row[2]
     }
+
+@app.get("/evaluation-runs")
+def get_evaluation_runs():
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("SELECT * FROM evaluation_runs")
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    evaluation_runs = []
+
+    for row in rows:
+        evaluation_runs.append({
+            "id": row[0],
+            "dataset_id": row[1],
+            "status": row[2]
+        })
+
+    return {"evaluation_runs": evaluation_runs}
+
+@app.get("/evaluation-runs/{evaluation_run_id}/results")
+def get_evaluation_results(evaluation_run_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM evaluation_runs WHERE id = ?",
+        (evaluation_run_id,)
+    )
+
+    evaluation_run = cursor.fetchone()
+
+    if evaluation_run is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation run not found"
+        )
+
+    cursor.execute(
+        """
+        SELECT * FROM evaluation_results
+        WHERE evaluation_run_id = ?
+        """,
+        (evaluation_run_id,)
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    results = []
+
+    for row in rows:
+        results.append({
+            "id": row[0],
+            "evaluation_run_id": row[1],
+            "test_case_id": row[2],
+            "actual_output": row[3],
+            "score": row[4]
+        })
+
+    return {"results": results}

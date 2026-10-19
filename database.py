@@ -40,6 +40,18 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS evaluation_results (
+    id INTEGER PRIMARY KEY,
+    evaluation_run_id INTEGER NOT NULL,
+    test_case_id INTEGER NOT NULL,
+    actual_output TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    FOREIGN KEY (evaluation_run_id) REFERENCES evaluation_runs(id),
+    FOREIGN KEY (test_case_id) REFERENCES test_cases(id)
+    )
+    """)
+
     connection.commit()
     connection.close()
 
