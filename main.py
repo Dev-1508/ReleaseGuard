@@ -587,6 +587,11 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     else:
         better_run = "tie"
 
+    if run_2_accuracy >= run_1_accuracy:
+        deployment_decision = "PASS"
+    else:
+        deployment_decision = "FAIL"
+
     connection.close()
 
     return {
@@ -595,5 +600,6 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     "run_2": run_id_2,
     "run_2_accuracy": run_2_accuracy,
     "improvement": improvement,
-    "better run": better_run
+    "better run": better_run,
+    "deployment_decision": deployment_decision
 }
