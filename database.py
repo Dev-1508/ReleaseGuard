@@ -76,6 +76,18 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tool_calls (
+        id INTEGER PRIMARY KEY,
+        evaluation_result_id INTEGER NOT NULL,
+        tool_name TEXT NOT NULL,
+        arguments TEXT NOT NULL,
+        result TEXT NOT NULL,
+        FOREIGN KEY (evaluation_result_id)
+            REFERENCES evaluation_results(id)
+    )
+    """)
+
     connection.commit()
     connection.close()
 

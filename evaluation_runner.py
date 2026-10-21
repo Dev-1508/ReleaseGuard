@@ -1,6 +1,7 @@
 from agent import run_agent
 from evaluator import evaluate_exact_match
 from database import get_database_connection
+import json
 
 
 def run_evaluation(dataset_id, agent_version_id):
@@ -42,7 +43,13 @@ def run_evaluation(dataset_id, agent_version_id):
         input_text = test_case[1]
         expected_output = test_case[2]
 
-        actual_output = run_agent(input_text,agent_version_id)
+        agent_result = run_agent(
+        input_text,
+        agent_version_id
+        )
+
+        actual_output = agent_result["output"]
+        tool_calls = agent_result["tool_calls"]
 
         score = evaluate_exact_match(
             expected_output,
@@ -69,13 +76,36 @@ def run_evaluation(dataset_id, agent_version_id):
     )
 
         connection.commit()
+        evaluation_result_id = cursor.lastrowid
+
+        for tool_call in tool_calls:
+            cursor.execute(
+        """
+        INSERT INTO tool_calls (
+            evaluation_result_id,
+            tool_name,
+            arguments,
+            result
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            evaluation_result_id,
+            tool_call["tool"],
+            json.dumps(tool_call["arguments"]),
+            tool_call["result"]
+        )
+    )
+
+        connection.commit()
 
         results.append({
             "test_case_id": test_case[0],
             "input_text": input_text,
             "expected_output": expected_output,
             "actual_output": actual_output,
-            "score": score
+            "score": score,
+            "tool_calls": tool_calls
         })
 
     if len(test_cases) > 0:

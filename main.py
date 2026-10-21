@@ -570,6 +570,52 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
             detail="Both evaluation runs must be completed"
         )
 
+@app.get("/evaluation-results/{evaluation_result_id}/tool-calls")
+def get_tool_calls(evaluation_result_id: int):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM evaluation_results WHERE id = ?",
+        (evaluation_result_id,)
+    )
+
+    evaluation_result = cursor.fetchone()
+
+    if evaluation_result is None:
+        connection.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation result not found"
+        )
+
+    cursor.execute(
+        """
+        SELECT * FROM tool_calls
+        WHERE evaluation_result_id = ?
+        """,
+        (evaluation_result_id,)
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    tool_calls = []
+
+    for row in rows:
+        tool_calls.append({
+            "id": row[0],
+            "evaluation_result_id": row[1],
+            "tool_name": row[2],
+            "arguments": row[3],
+            "result": row[4]
+        })
+
+    return {
+        "tool_calls": tool_calls
+    }
+
     cursor.execute(
     """
     SELECT AVG(score)
