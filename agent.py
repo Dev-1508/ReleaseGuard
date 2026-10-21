@@ -2,8 +2,10 @@ from agent_tools import cancel_order, get_order_status
 
 
 def run_agent(input_text, agent_version_id):
-    if input_text == "Cancel Order #123":
-        tool_result = cancel_order(123)
+    if input_text.startswith("Cancel Order #"):
+        order_id = int(input_text.split("#")[1])
+
+        tool_result = cancel_order(order_id)
 
         return {
             "output": "Order cancelled successfully",
@@ -11,7 +13,7 @@ def run_agent(input_text, agent_version_id):
                 {
                     "tool": "cancel_order",
                     "arguments": {
-                        "order_id": 123
+                        "order_id": order_id
                     },
                     "result": tool_result
                 }
