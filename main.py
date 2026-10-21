@@ -556,6 +556,13 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
             detail="Evaluation run not found"
         )
 
+    if run_1[1] != run_2[1]:
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Evaluation runs must use the same dataset"
+        )
+
     cursor.execute(
     """
     SELECT AVG(score)
