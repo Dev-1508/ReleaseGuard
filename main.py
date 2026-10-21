@@ -594,6 +594,9 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     improvement = run_2_accuracy - run_1_accuracy
 
+    run_1_agent_version = run_1[3]
+    run_2_agent_version = run_2[3]
+
     if run_2_accuracy > run_1_accuracy:
         better_run = run_id_2
     elif run_1_accuracy > run_2_accuracy:
@@ -610,10 +613,12 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     return {
     "run_1": run_id_1,
+    "run_1_agent_version": run_1_agent_version,
     "run_1_accuracy": run_1_accuracy,
     "run_2": run_id_2,
+    "run_2_agent_version": run_2_agent_version,
     "run_2_accuracy": run_2_accuracy,
     "improvement": improvement,
     "better run": better_run,
-    "deployment_decision": deployment_decision
+    "deployment_decision": deployment_decision,
 }
