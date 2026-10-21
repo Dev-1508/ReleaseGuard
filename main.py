@@ -24,6 +24,7 @@ class TestCase(BaseModel):
     input_text: str
     expected_output: str
     dataset_id: int
+    expected_tool: str | None = None
 
 
 class EvaluationRun(BaseModel):
@@ -240,12 +241,22 @@ def create_test_case(test_case: TestCase):
         raise HTTPException(status_code=404, detail="Dataset not found")
 
     cursor.execute(
-        """
-        INSERT INTO test_cases (input_text, expected_output, dataset_id)
-        VALUES (?, ?, ?)
-        """,
-        (test_case.input_text, test_case.expected_output, test_case.dataset_id),
+    """
+    INSERT INTO test_cases (
+        input_text,
+        expected_output,
+        dataset_id,
+        expected_tool
     )
+    VALUES (?, ?, ?, ?)
+    """,
+    (
+        test_case.input_text,
+        test_case.expected_output,
+        test_case.dataset_id,
+        test_case.expected_tool
+    )
+)
 
     connection.commit()
 
@@ -260,6 +271,7 @@ def create_test_case(test_case: TestCase):
             "input_text": test_case.input_text,
             "expected_output": test_case.expected_output,
             "dataset_id": test_case.dataset_id,
+            "expected_tool": test_case.expected_tool
         },
     }
 
@@ -292,6 +304,7 @@ def get_dataset_test_cases(dataset_id: int):
                 "input_text": row[1],
                 "expected_output": row[2],
                 "dataset_id": row[3],
+                "expected_tool": row[4]
             }
         )
 

@@ -1,5 +1,5 @@
 from agent import run_agent
-from evaluator import evaluate_exact_match
+from evaluator import evaluate_exact_match, evaluate_tool_call
 from database import get_database_connection
 import json
 
@@ -38,6 +38,8 @@ def run_evaluation(dataset_id, agent_version_id):
     results = []
 
     total_score = 0
+    total_tool_score = 0
+    tool_test_count = 0
 
     for test_case in test_cases:
         input_text = test_case[1]
@@ -55,6 +57,18 @@ def run_evaluation(dataset_id, agent_version_id):
             expected_output,
             actual_output
         )
+        
+        expected_tool = test_case[4]
+
+        tool_score = evaluate_tool_call(
+                    expected_tool,
+                    tool_calls
+                )
+
+        if tool_score is not None:
+            total_tool_score += tool_score
+            tool_test_count += 1
+        
         total_score += score
 
         cursor.execute(
@@ -105,6 +119,8 @@ def run_evaluation(dataset_id, agent_version_id):
             "expected_output": expected_output,
             "actual_output": actual_output,
             "score": score,
+            "expected_tool": expected_tool,
+            "tool_score": tool_score,
             "tool_calls": tool_calls
         })
 
@@ -112,6 +128,11 @@ def run_evaluation(dataset_id, agent_version_id):
         accuracy = total_score / len(test_cases)
     else:
         accuracy = 0
+
+    if tool_test_count > 0:
+        tool_accuracy = total_tool_score / tool_test_count
+    else:
+        tool_accuracy = None
 
     cursor.execute(
     """
@@ -128,5 +149,6 @@ def run_evaluation(dataset_id, agent_version_id):
     return {
     "evaluation_run_id": evaluation_run_id,
     "accuracy": accuracy,
+    "tool_accuracy": tool_accuracy,
     "results": results
 }

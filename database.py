@@ -40,6 +40,19 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("PRAGMA table_info(test_cases)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "expected_tool" not in column_names:
+        cursor.execute(
+            "ALTER TABLE test_cases ADD COLUMN expected_tool TEXT"
+        )
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_runs (
         id INTEGER PRIMARY KEY,
