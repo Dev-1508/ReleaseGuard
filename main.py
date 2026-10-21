@@ -563,6 +563,13 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
             detail="Evaluation runs must use the same dataset"
         )
 
+    if run_1[2] != "completed" or run_2[2] != "completed":
+        connection.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Both evaluation runs must be completed"
+        )
+
     cursor.execute(
     """
     SELECT AVG(score)
