@@ -77,15 +77,17 @@ def run_evaluation(dataset_id, agent_version_id):
             evaluation_run_id,
             test_case_id,
             actual_output,
-            score
+            score,
+            tool_score
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         """,
         (
             evaluation_run_id,
             test_case[0],
             actual_output,
-            score
+            score,
+            tool_score
         )
     )
 

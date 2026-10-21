@@ -64,6 +64,19 @@ def initialize_database():
     )
     """)
 
+    cursor.execute("PRAGMA table_info(evaluation_results)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "tool_score" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_results ADD COLUMN tool_score INTEGER"
+        )
+
     cursor.execute("PRAGMA table_info(evaluation_runs)")
     columns = cursor.fetchall()
 

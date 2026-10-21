@@ -424,6 +424,7 @@ def get_evaluation_results(evaluation_run_id: int):
                 "test_case_id": row[2],
                 "actual_output": row[3],
                 "score": row[4],
+                "tool_score": row[5]
             }
         )
 
@@ -445,7 +446,7 @@ def get_evaluation_summary(evaluation_run_id: int):
 
     cursor.execute(
         """
-        SELECT score
+        SELECT score,tool_score
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -466,11 +467,26 @@ def get_evaluation_summary(evaluation_run_id: int):
 
         accuracy = total_score / len(rows)
 
+
+    total_tool_score = 0
+    tool_test_count = 0
+
+    for row in rows:
+        if row[1] is not None:
+            total_tool_score += row[1]
+            tool_test_count += 1
+
+    if tool_test_count > 0:
+        tool_accuracy = total_tool_score / tool_test_count
+    else:
+        tool_accuracy = None
+
     return {
         "evaluation_run_id": evaluation_run_id,
         "status": evaluation_run[2],
         "total_tests": len(rows),
         "accuracy": accuracy,
+        "tool_accuracy": tool_accuracy
     }
 
 
