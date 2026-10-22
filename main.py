@@ -561,6 +561,7 @@ def get_project_agent_versions(project_id: int):
 
 @app.get("/comparisons/runs/{run_id_1}/{run_id_2}")
 def compare_evaluation_runs(run_id_1: int, run_id_2: int):
+
     connection = get_database_connection()
     cursor = connection.cursor()
 
@@ -580,6 +581,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     if run_1 is None or run_2 is None:
         connection.close()
+
         raise HTTPException(
             status_code=404,
             detail="Evaluation run not found"
@@ -587,6 +589,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     if run_1[1] != run_2[1]:
         connection.close()
+
         raise HTTPException(
             status_code=400,
             detail="Evaluation runs must use the same dataset"
@@ -594,13 +597,89 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     if run_1[2] != "completed" or run_2[2] != "completed":
         connection.close()
+
         raise HTTPException(
             status_code=400,
             detail="Both evaluation runs must be completed"
         )
 
+
+    cursor.execute(
+        """
+        SELECT AVG(score), AVG(tool_score)
+        FROM evaluation_results
+        WHERE evaluation_run_id = ?
+        """,
+        (run_id_1,)
+    )
+
+    run_1_metrics = cursor.fetchone()
+
+    run_1_accuracy = run_1_metrics[0]
+    run_1_tool_accuracy = run_1_metrics[1]
+
+
+    cursor.execute(
+        """
+        SELECT AVG(score), AVG(tool_score)
+        FROM evaluation_results
+        WHERE evaluation_run_id = ?
+        """,
+        (run_id_2,)
+    )
+
+    run_2_metrics = cursor.fetchone()
+
+    run_2_accuracy = run_2_metrics[0]
+    run_2_tool_accuracy = run_2_metrics[1]
+
+
+    improvement = run_2_accuracy - run_1_accuracy
+
+    run_1_agent_version = run_1[3]
+    run_2_agent_version = run_2[3]
+
+
+    if run_2_accuracy > run_1_accuracy:
+        better_run = run_id_2
+
+    elif run_1_accuracy > run_2_accuracy:
+        better_run = run_id_1
+
+    else:
+        better_run = "tie"
+
+
+    if run_2_accuracy >= run_1_accuracy:
+        deployment_decision = "PASS"
+
+    else:
+        deployment_decision = "FAIL"
+
+
+    connection.close()
+
+    return {
+        "run_1": run_id_1,
+        "run_1_agent_version": run_1_agent_version,
+        "run_1_accuracy": run_1_accuracy,
+        "run_1_tool_accuracy": run_1_tool_accuracy,
+
+        "run_2": run_id_2,
+        "run_2_agent_version": run_2_agent_version,
+        "run_2_accuracy": run_2_accuracy,
+        "run_2_tool_accuracy": run_2_tool_accuracy,
+
+        "improvement": improvement,
+        "better_run": better_run,
+        "deployment_decision": deployment_decision
+    }
+
+
+
 @app.get("/evaluation-results/{evaluation_result_id}/tool-calls")
 def get_tool_calls(evaluation_result_id: int):
+
     connection = get_database_connection()
     cursor = connection.cursor()
 
@@ -613,6 +692,7 @@ def get_tool_calls(evaluation_result_id: int):
 
     if evaluation_result is None:
         connection.close()
+
         raise HTTPException(
             status_code=404,
             detail="Evaluation result not found"
@@ -644,56 +724,3 @@ def get_tool_calls(evaluation_result_id: int):
     return {
         "tool_calls": tool_calls
     }
-
-    cursor.execute(
-    """
-    SELECT AVG(score)
-    FROM evaluation_results
-    WHERE evaluation_run_id = ?
-    """,
-    (run_id_1,)
-)
-
-    run_1_accuracy = cursor.fetchone()[0]
-
-    cursor.execute(
-    """
-    SELECT AVG(score)
-    FROM evaluation_results
-    WHERE evaluation_run_id = ?
-    """,
-    (run_id_2,)
-)
-
-    run_2_accuracy = cursor.fetchone()[0]
-
-    improvement = run_2_accuracy - run_1_accuracy
-
-    run_1_agent_version = run_1[3]
-    run_2_agent_version = run_2[3]
-
-    if run_2_accuracy > run_1_accuracy:
-        better_run = run_id_2
-    elif run_1_accuracy > run_2_accuracy:
-        better_run = run_id_1
-    else:
-        better_run = "tie"
-
-    if run_2_accuracy >= run_1_accuracy:
-        deployment_decision = "PASS"
-    else:
-        deployment_decision = "FAIL"
-
-    connection.close()
-
-    return {
-    "run_1": run_id_1,
-    "run_1_agent_version": run_1_agent_version,
-    "run_1_accuracy": run_1_accuracy,
-    "run_2": run_id_2,
-    "run_2_agent_version": run_2_agent_version,
-    "run_2_accuracy": run_2_accuracy,
-    "improvement": improvement,
-    "better run": better_run,
-    "deployment_decision": deployment_decision,
-}
