@@ -26,6 +26,11 @@ class TestCase(BaseModel):
     dataset_id: int
     expected_tool: str | None = None
 
+class TestCaseUpdate(BaseModel):
+    input_text: str
+    expected_output: str
+    expected_tool: str | None = None
+
 
 class EvaluationRun(BaseModel):
     dataset_id: int
@@ -759,3 +764,48 @@ def get_tool_calls(evaluation_result_id: int):
     return {
         "tool_calls": tool_calls
     } 
+
+@app.put("/test-cases/{test_case_id}")
+def update_test_case(test_case_id: int, test_case: TestCaseUpdate):
+
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM test_cases WHERE id = ?",
+        (test_case_id,)
+    )
+
+    existing_test_case = cursor.fetchone()
+
+    if existing_test_case is None:
+        connection.close()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Test case not found"
+        )
+
+    cursor.execute(
+        """
+        UPDATE test_cases
+        SET input_text = ?,
+            expected_output = ?,
+            expected_tool = ?
+        WHERE id = ?
+        """,
+        (
+            test_case.input_text,
+            test_case.expected_output,
+            test_case.expected_tool,
+            test_case_id
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {
+        "message": "Test case updated",
+        "test_case_id": test_case_id
+    }
