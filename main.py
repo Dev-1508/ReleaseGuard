@@ -650,12 +650,23 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         better_run = "tie"
 
 
-    if run_2_accuracy >= run_1_accuracy:
+    if (
+    run_2_accuracy >= run_1_accuracy
+    and
+    (
+        run_1_tool_accuracy is None
+        or run_2_tool_accuracy is None
+        or run_2_tool_accuracy >= run_1_tool_accuracy
+    )
+):
         deployment_decision = "PASS"
-
     else:
         deployment_decision = "FAIL"
 
+    if deployment_decision == "PASS":
+        deployment_reason = "New run does not regress on evaluated metrics"
+    else:
+        deployment_reason = "New run regresses on one or more evaluated metrics"
 
     connection.close()
 
@@ -672,7 +683,8 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
         "improvement": improvement,
         "better_run": better_run,
-        "deployment_decision": deployment_decision
+        "deployment_decision": deployment_decision,
+        "deployment_reason": deployment_reason
     }
 
 
@@ -723,4 +735,4 @@ def get_tool_calls(evaluation_result_id: int):
 
     return {
         "tool_calls": tool_calls
-    }
+    } 
