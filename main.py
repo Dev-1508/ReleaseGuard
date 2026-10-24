@@ -636,6 +636,14 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     improvement = run_2_accuracy - run_1_accuracy
 
+    if (
+    run_1_tool_accuracy is not None
+    and run_2_tool_accuracy is not None
+):
+        tool_improvement = run_2_tool_accuracy - run_1_tool_accuracy
+    else:
+        tool_improvement = None
+
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
 
@@ -647,7 +655,21 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         better_run = run_id_1
 
     else:
-        better_run = "tie"
+        if (
+        run_1_tool_accuracy is not None
+        and run_2_tool_accuracy is not None
+    ):
+            if run_2_tool_accuracy > run_1_tool_accuracy:
+                better_run = run_id_2
+
+            elif run_1_tool_accuracy > run_2_tool_accuracy:
+                better_run = run_id_1
+
+            else:
+                better_run = "tie"
+
+        else:
+            better_run = "tie"
 
 
     if (
@@ -682,6 +704,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_2_tool_accuracy": run_2_tool_accuracy,
 
         "improvement": improvement,
+        "tool_improvement": tool_improvement,
         "better_run": better_run,
         "deployment_decision": deployment_decision,
         "deployment_reason": deployment_reason
