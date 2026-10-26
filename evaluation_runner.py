@@ -1,5 +1,5 @@
 from agent import run_agent
-from evaluator import evaluate_exact_match, evaluate_tool_call
+from evaluator import evaluate_normalized_match, evaluate_tool_call
 from database import get_database_connection
 import json
 
@@ -53,7 +53,7 @@ def run_evaluation(dataset_id, agent_version_id):
         actual_output = agent_result["output"]
         tool_calls = agent_result["tool_calls"]
 
-        score = evaluate_exact_match(
+        score = evaluate_normalized_match(
             expected_output,
             actual_output
         )
