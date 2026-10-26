@@ -1,7 +1,10 @@
 from agent_tools import cancel_order, get_order_status
-
+from ollama_agent import run_ollama_agent
 
 def run_agent(input_text, agent_version_id):
+
+    if agent_version_id == 4:
+        return run_ollama_agent(input_text)
 
     if agent_version_id == 3 and input_text == "Cancel Order #789":
         tool_result = get_order_status(789)
