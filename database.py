@@ -77,6 +77,19 @@ def initialize_database():
             "ALTER TABLE evaluation_results ADD COLUMN tool_score INTEGER"
         )
 
+    cursor.execute("PRAGMA table_info(evaluation_results)")
+    columns = cursor.fetchall()
+    
+    column_names = []
+    
+    for column in columns:
+        column_names.append(column[1])
+    
+    if "semantic_score" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_results ADD COLUMN semantic_score INTEGER"
+        )
+
     cursor.execute("PRAGMA table_info(evaluation_runs)")
     columns = cursor.fetchall()
 
@@ -89,6 +102,8 @@ def initialize_database():
         cursor.execute(
             "ALTER TABLE evaluation_runs ADD COLUMN agent_version_id INTEGER"
         )
+
+    
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (

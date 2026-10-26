@@ -451,7 +451,7 @@ def get_evaluation_summary(evaluation_run_id: int):
 
     cursor.execute(
         """
-        SELECT score,tool_score
+        SELECT score,tool_score, semantic_score
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -486,12 +486,26 @@ def get_evaluation_summary(evaluation_run_id: int):
     else:
         tool_accuracy = None
 
+    total_semantic_score = 0
+    semantic_test_count = 0
+
+    for row in rows:
+        if row[2] is not None:
+            total_semantic_score += row[2]
+            semantic_test_count += 1
+
+    if semantic_test_count > 0:
+        semantic_accuracy = total_semantic_score / semantic_test_count
+    else:
+        semantic_accuracy = None
+
     return {
         "evaluation_run_id": evaluation_run_id,
         "status": evaluation_run[2],
         "total_tests": len(rows),
         "accuracy": accuracy,
-        "tool_accuracy": tool_accuracy
+        "tool_accuracy": tool_accuracy,
+        "semantic_accuracy": semantic_accuracy
     }
 
 

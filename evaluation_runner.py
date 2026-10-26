@@ -1,6 +1,7 @@
 from agent import run_agent
 from evaluator import evaluate_normalized_match, evaluate_tool_call
 from database import get_database_connection
+from semantic_evaluator import evaluate_semantic_match
 import json
 
 
@@ -40,6 +41,8 @@ def run_evaluation(dataset_id, agent_version_id):
     total_score = 0
     total_tool_score = 0
     tool_test_count = 0
+    total_semantic_score = 0
+    semantic_test_count = 0
 
     for test_case in test_cases:
         input_text = test_case[1]
@@ -57,6 +60,18 @@ def run_evaluation(dataset_id, agent_version_id):
             expected_output,
             actual_output
         )
+
+        if score == 1:
+            semantic_score = 1
+        else:
+            semantic_score = evaluate_semantic_match(
+                expected_output,
+                actual_output
+            )
+
+        if semantic_score is not None:
+            total_semantic_score += semantic_score
+            semantic_test_count += 1
         
         expected_tool = test_case[4]
 
@@ -78,16 +93,18 @@ def run_evaluation(dataset_id, agent_version_id):
             test_case_id,
             actual_output,
             score,
-            tool_score
+            tool_score,
+            semantic_score
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             evaluation_run_id,
             test_case[0],
             actual_output,
             score,
-            tool_score
+            tool_score,
+            semantic_score
         )
     )
 
@@ -123,7 +140,8 @@ def run_evaluation(dataset_id, agent_version_id):
             "score": score,
             "expected_tool": expected_tool,
             "tool_score": tool_score,
-            "tool_calls": tool_calls
+            "tool_calls": tool_calls,
+            "semantic_score": semantic_score
         })
 
     if len(test_cases) > 0:
@@ -135,6 +153,11 @@ def run_evaluation(dataset_id, agent_version_id):
         tool_accuracy = total_tool_score / tool_test_count
     else:
         tool_accuracy = None
+
+    if semantic_test_count > 0:
+        semantic_accuracy = total_semantic_score / semantic_test_count
+    else:
+        semantic_accuracy = None
 
     cursor.execute(
     """
@@ -152,5 +175,6 @@ def run_evaluation(dataset_id, agent_version_id):
     "evaluation_run_id": evaluation_run_id,
     "accuracy": accuracy,
     "tool_accuracy": tool_accuracy,
+    "semantic_accuracy": semantic_accuracy,
     "results": results
 }
