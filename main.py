@@ -625,7 +625,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     cursor.execute(
         """
-        SELECT AVG(score), AVG(tool_score)
+        SELECT AVG(score), AVG(tool_score), AVG(semantic_score)
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -636,11 +636,12 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     run_1_accuracy = run_1_metrics[0]
     run_1_tool_accuracy = run_1_metrics[1]
+    run_1_semantic_accuracy = run_1_metrics[2]
 
 
     cursor.execute(
         """
-        SELECT AVG(score), AVG(tool_score)
+        SELECT AVG(score), AVG(tool_score), AVG(semantic_score)
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -651,6 +652,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     run_2_accuracy = run_2_metrics[0]
     run_2_tool_accuracy = run_2_metrics[1]
+    run_2_semantic_accuracy = run_2_metrics[2]
 
 
     improvement = run_2_accuracy - run_1_accuracy
@@ -662,6 +664,17 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         tool_improvement = run_2_tool_accuracy - run_1_tool_accuracy
     else:
         tool_improvement = None
+
+    if (
+    run_1_semantic_accuracy is not None
+    and run_2_semantic_accuracy is not None
+):
+        semantic_improvement = (
+            run_2_semantic_accuracy
+            - run_1_semantic_accuracy
+        )
+    else:
+        semantic_improvement = None
 
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
@@ -716,16 +729,19 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_1_agent_version": run_1_agent_version,
         "run_1_accuracy": run_1_accuracy,
         "run_1_tool_accuracy": run_1_tool_accuracy,
+        "run_1_semantic_accuracy": run_1_semantic_accuracy,
 
         "run_2": run_id_2,
         "run_2_agent_version": run_2_agent_version,
         "run_2_accuracy": run_2_accuracy,
         "run_2_tool_accuracy": run_2_tool_accuracy,
+        "run_2_semantic_accuracy": run_2_semantic_accuracy,
 
         "improvement": improvement,
         "tool_improvement": tool_improvement,
         "better_run": better_run,
         "deployment_decision": deployment_decision,
+        "semantic_improvement": semantic_improvement,
         "deployment_reason": deployment_reason
     }
 
