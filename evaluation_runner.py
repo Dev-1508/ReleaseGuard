@@ -6,7 +6,11 @@ import json
 import hashlib
 
 
-def run_evaluation(dataset_id, agent_version_id):
+def run_evaluation(
+    dataset_id,
+    agent_version_id,
+    max_test_cases=None
+):
     connection = get_database_connection()
     cursor = connection.cursor()
 
@@ -16,6 +20,9 @@ def run_evaluation(dataset_id, agent_version_id):
     )
 
     test_cases = cursor.fetchall()
+
+    if max_test_cases is not None:
+        test_cases = test_cases[:max_test_cases]
 
     fingerprint_data = []
 

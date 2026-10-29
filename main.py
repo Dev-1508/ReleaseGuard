@@ -35,6 +35,7 @@ class TestCaseUpdate(BaseModel):
 class EvaluationRun(BaseModel):
     dataset_id: int
     agent_version_id: int
+    max_test_cases: int | None = None
 
 
 class AgentVersion(BaseModel):
@@ -341,7 +342,7 @@ def create_evaluation_run(evaluation_run: EvaluationRun):
         raise HTTPException(status_code=404, detail="Agent version not found")
 
     evaluation = run_evaluation(
-        evaluation_run.dataset_id, evaluation_run.agent_version_id
+        evaluation_run.dataset_id, evaluation_run.agent_version_id, evaluation_run.max_test_cases
     )
 
     return {"message": "Evaluation completed", "evaluation": evaluation}
