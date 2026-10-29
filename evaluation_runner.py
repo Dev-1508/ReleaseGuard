@@ -44,21 +44,28 @@ def run_evaluation(
         fingerprint_text.encode("utf-8")
     ).hexdigest()
 
+    if max_test_cases is None:
+        run_type = "full"
+    else:
+        run_type = "smoke"
+
     cursor.execute(
         """
         INSERT INTO evaluation_runs (
         dataset_id,
         status,
         agent_version_id,
-        dataset_fingerprint
+        dataset_fingerprint,
+        run_type
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         """,
         (
         dataset_id,
         "running",
         agent_version_id,
-        dataset_fingerprint
+        dataset_fingerprint,
+        run_type
     )
     )
     

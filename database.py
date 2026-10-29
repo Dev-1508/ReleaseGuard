@@ -116,6 +116,19 @@ def initialize_database():
             "ALTER TABLE evaluation_runs ADD COLUMN dataset_fingerprint TEXT"
         )
 
+    cursor.execute("PRAGMA table_info(evaluation_runs)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "run_type" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_runs ADD COLUMN run_type TEXT"
+        )
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (
     id INTEGER PRIMARY KEY,
