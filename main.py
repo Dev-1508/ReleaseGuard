@@ -366,6 +366,7 @@ def get_evaluation_run(evaluation_run_id: int):
         "dataset_id": row[1],
         "status": row[2],
         "agent_version_id": row[3],
+        "dataset_fingerprint": row[4]
     }
 
 
@@ -612,6 +613,18 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         raise HTTPException(
             status_code=400,
             detail="Evaluation runs must use the same dataset"
+        )
+
+    if (
+    run_1[4] is not None
+    and run_2[4] is not None
+    and run_1[4] != run_2[4]
+):
+        connection.close()
+
+        raise HTTPException(
+            status_code=400,
+            detail="Evaluation runs used different versions of the dataset"
         )
 
     if run_1[2] != "completed" or run_2[2] != "completed":

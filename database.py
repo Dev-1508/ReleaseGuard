@@ -103,7 +103,18 @@ def initialize_database():
             "ALTER TABLE evaluation_runs ADD COLUMN agent_version_id INTEGER"
         )
 
-    
+    cursor.execute("PRAGMA table_info(evaluation_runs)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "dataset_fingerprint" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_runs ADD COLUMN dataset_fingerprint TEXT"
+        )
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (

@@ -3,6 +3,7 @@ from evaluator import evaluate_normalized_match, evaluate_tool_call
 from database import get_database_connection
 from semantic_evaluator import evaluate_semantic_match
 import json
+import hashlib
 
 
 def run_evaluation(dataset_id, agent_version_id):
@@ -10,31 +11,53 @@ def run_evaluation(dataset_id, agent_version_id):
     cursor = connection.cursor()
 
     cursor.execute(
-    """
-    INSERT INTO evaluation_runs (
-    dataset_id,
-    status,
-    agent_version_id
-    )
-    VALUES (?, ?, ?)
-    """,
-    (
-    dataset_id,
-    "running",
-    agent_version_id
-)
-)
-
-    connection.commit()
-
-    evaluation_run_id = cursor.lastrowid
-
-    cursor.execute(
         "SELECT * FROM test_cases WHERE dataset_id = ?",
         (dataset_id,)
     )
 
     test_cases = cursor.fetchall()
+
+    fingerprint_data = []
+
+    for test_case in test_cases:
+        fingerprint_data.append({
+            "id": test_case[0],
+            "input_text": test_case[1],
+            "expected_output": test_case[2],
+            "dataset_id": test_case[3],
+            "expected_tool": test_case[4]
+            })
+
+    fingerprint_text = json.dumps(
+        fingerprint_data,
+        sort_keys=True
+    )
+
+    dataset_fingerprint = hashlib.sha256(
+        fingerprint_text.encode("utf-8")
+    ).hexdigest()
+
+    cursor.execute(
+        """
+        INSERT INTO evaluation_runs (
+        dataset_id,
+        status,
+        agent_version_id,
+        dataset_fingerprint
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+        dataset_id,
+        "running",
+        agent_version_id,
+        dataset_fingerprint
+    )
+    )
+    
+    connection.commit()
+    
+    evaluation_run_id = cursor.lastrowid
 
     results = []
 
