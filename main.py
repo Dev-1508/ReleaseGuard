@@ -712,6 +712,12 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         or run_2_tool_accuracy is None
         or run_2_tool_accuracy >= run_1_tool_accuracy
     )
+    and
+    (
+        run_1_semantic_accuracy is None
+        or run_2_semantic_accuracy is None
+        or run_2_semantic_accuracy >= run_1_semantic_accuracy
+    )
 ):
         deployment_decision = "PASS"
     else:
