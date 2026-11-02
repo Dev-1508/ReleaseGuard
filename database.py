@@ -142,6 +142,24 @@ def initialize_database():
             "ALTER TABLE evaluation_results ADD COLUMN latency_ms REAL"
         )
 
+    cursor.execute("PRAGMA table_info(agent_versions)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "provider" not in column_names:
+        cursor.execute(
+            "ALTER TABLE agent_versions ADD COLUMN provider TEXT"
+        )
+
+    if "model_name" not in column_names:
+        cursor.execute(
+            "ALTER TABLE agent_versions ADD COLUMN model_name TEXT"
+        )
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (
     id INTEGER PRIMARY KEY,

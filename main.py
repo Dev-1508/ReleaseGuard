@@ -41,6 +41,13 @@ class EvaluationRun(BaseModel):
 class AgentVersion(BaseModel):
     name: str
     project_id: int
+    provider: str | None = None
+    model_name: str | None = None
+
+class AgentVersionUpdate(BaseModel):
+    name: str
+    provider: str | None = None
+    model_name: str | None = None
 
 
 @app.get("/")
@@ -540,12 +547,22 @@ def create_agent_version(agent_version: AgentVersion):
         raise HTTPException(status_code=404, detail="Project not found")
 
     cursor.execute(
-        """
-        INSERT INTO agent_versions (name, project_id)
-        VALUES (?, ?)
-        """,
-        (agent_version.name, agent_version.project_id),
+    """
+    INSERT INTO agent_versions (
+        name,
+        project_id,
+        provider,
+        model_name
     )
+    VALUES (?, ?, ?, ?)
+    """,
+    (
+        agent_version.name,
+        agent_version.project_id,
+        agent_version.provider,
+        agent_version.model_name
+    )
+)
 
     connection.commit()
 
@@ -559,6 +576,8 @@ def create_agent_version(agent_version: AgentVersion):
             "id": agent_version_id,
             "name": agent_version.name,
             "project_id": agent_version.project_id,
+            "provider": agent_version.provider,
+            "model_name": agent_version.model_name
         },
     }
 
@@ -591,7 +610,13 @@ def get_project_agent_versions(project_id: int):
     agent_versions = []
 
     for row in rows:
-        agent_versions.append({"id": row[0], "name": row[1], "project_id": row[2]})
+        agent_versions.append({
+        "id": row[0],
+        "name": row[1],
+        "project_id": row[2],
+        "provider": row[3],
+        "model_name": row[4]
+        })
 
     return {"agent_versions": agent_versions}
 
@@ -813,7 +838,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "semantic_improvement": semantic_improvement,
         "deployment_reason": deployment_reason,
         "latency_improvement_ms": latency_improvement_ms,
-        "latency_improvement_percent": latency_improvement_percent
+        "latency_improvement_percent": latency_improvement_percent,
     }
 
 
@@ -910,3 +935,51 @@ def update_test_case(test_case_id: int, test_case: TestCaseUpdate):
         "message": "Test case updated",
         "test_case_id": test_case_id
     }
+
+@app.put("/agent-versions/{agent_version_id}")
+def update_agent_version(
+    agent_version_id: int,
+    agent_version: AgentVersionUpdate
+):
+
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        "SELECT * FROM agent_versions WHERE id = ?",
+        (agent_version_id,)
+    )
+
+    existing_version = cursor.fetchone()
+
+    if existing_version is None:
+        connection.close()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Agent version not found"
+        )
+
+    cursor.execute(
+        """
+        UPDATE agent_versions
+        SET name = ?,
+            provider = ?,
+            model_name = ?
+        WHERE id = ?
+        """,
+        (
+            agent_version.name,
+            agent_version.provider,
+            agent_version.model_name,
+            agent_version_id
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {
+        "message": "Agent version updated",
+        "agent_version_id": agent_version_id
+    }   
