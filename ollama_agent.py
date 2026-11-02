@@ -3,7 +3,10 @@ from ollama import chat
 from agent_tools import cancel_order, get_order_status
 
 
-def run_ollama_agent(input_text):
+def run_ollama_agent(
+    input_text,
+    model_name="qwen3.5:4b"
+):
 
     messages = [
         {
@@ -29,7 +32,7 @@ def run_ollama_agent(input_text):
 
 
     response = chat(
-        model="qwen3.5:4b",
+        model=model_name,
         messages=messages,
         tools=[
             cancel_order,

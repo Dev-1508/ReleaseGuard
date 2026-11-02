@@ -4,7 +4,16 @@ from ollama_agent import run_ollama_agent
 def run_agent(input_text, agent_version_id):
 
     if agent_version_id == 4:
-        return run_ollama_agent(input_text)
+        return run_ollama_agent(
+            input_text,
+            "qwen3.5:4b"
+        )
+
+    if agent_version_id == 5:
+        return run_ollama_agent(
+            input_text,
+            "qwen3:1.7b"
+        )
 
     if agent_version_id == 3 and input_text == "Cancel Order #789":
         tool_result = get_order_status(789)
