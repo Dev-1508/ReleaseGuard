@@ -715,7 +715,14 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     cursor.execute(
         """
-        SELECT AVG(score), AVG(tool_score), AVG(semantic_score), AVG(latency_ms)
+        SELECT
+            AVG(score),
+            AVG(tool_score),
+            AVG(semantic_score),
+            AVG(latency_ms),
+            SUM(prompt_tokens),
+            SUM(output_tokens),
+            SUM(total_tokens)
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -728,15 +735,26 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_1_tool_accuracy = run_1_metrics[1]
     run_1_semantic_accuracy = run_1_metrics[2]
     run_1_average_latency_ms = run_1_metrics[3]
+    run_1_prompt_tokens = run_1_metrics[4]
+    run_1_output_tokens = run_1_metrics[5]
+    run_1_total_tokens = run_1_metrics[6]
+    
 
     cursor.execute(
-        """
-        SELECT AVG(score), AVG(tool_score), AVG(semantic_score), AVG(latency_ms)
-        FROM evaluation_results
-        WHERE evaluation_run_id = ?
-        """,
-        (run_id_2,)
-    )
+    """
+    SELECT
+        AVG(score),
+        AVG(tool_score),
+        AVG(semantic_score),
+        AVG(latency_ms),
+        SUM(prompt_tokens),
+        SUM(output_tokens),
+        SUM(total_tokens)
+    FROM evaluation_results
+    WHERE evaluation_run_id = ?
+    """,
+    (run_id_2,)
+)
 
     run_2_metrics = cursor.fetchone()
 
@@ -744,6 +762,10 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_2_tool_accuracy = run_2_metrics[1]
     run_2_semantic_accuracy = run_2_metrics[2]
     run_2_average_latency_ms = run_2_metrics[3]
+    run_2_prompt_tokens = run_2_metrics[4]
+    run_2_output_tokens = run_2_metrics[5]
+    run_2_total_tokens = run_2_metrics[6]
+    
 
 
     improvement = run_2_accuracy - run_1_accuracy
@@ -886,6 +908,10 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_1_average_latency_ms": run_1_average_latency_ms,
         "run_1_provider": run_1_provider,
         "run_1_model_name": run_1_model_name,
+        "run_1_prompt_tokens": run_1_prompt_tokens,
+        "run_1_output_tokens": run_1_output_tokens,
+        "run_1_total_tokens": run_1_total_tokens,
+
 
 
         "run_2": run_id_2,
@@ -896,6 +922,9 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_2_average_latency_ms": run_2_average_latency_ms,
         "run_2_provider": run_2_provider,
         "run_2_model_name": run_2_model_name,
+        "run_2_prompt_tokens": run_2_prompt_tokens,
+        "run_2_output_tokens": run_2_output_tokens,
+        "run_2_total_tokens": run_2_total_tokens,
 
         "improvement": improvement,
         "tool_improvement": tool_improvement,
