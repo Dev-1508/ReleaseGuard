@@ -4,6 +4,7 @@ from database import get_database_connection
 from semantic_evaluator import evaluate_semantic_match
 import json
 import hashlib
+import time
 
 
 def run_evaluation(
@@ -11,6 +12,9 @@ def run_evaluation(
     agent_version_id,
     max_test_cases=None
 ):
+
+    total_latency_ms = 0
+    
     connection = get_database_connection()
     cursor = connection.cursor()
 
@@ -85,10 +89,18 @@ def run_evaluation(
         input_text = test_case[1]
         expected_output = test_case[2]
 
+        start_time = time.perf_counter()
+
         agent_result = run_agent(
-        input_text,
-        agent_version_id
+            input_text,
+            agent_version_id
         )
+
+        end_time = time.perf_counter()
+
+        latency_ms = (end_time - start_time) * 1000
+
+        total_latency_ms += latency_ms
 
         actual_output = agent_result["output"]
         tool_calls = agent_result["tool_calls"]
@@ -131,9 +143,10 @@ def run_evaluation(
             actual_output,
             score,
             tool_score,
-            semantic_score
+            semantic_score,
+            latency_ms
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
             evaluation_run_id,
@@ -141,7 +154,8 @@ def run_evaluation(
             actual_output,
             score,
             tool_score,
-            semantic_score
+            semantic_score,
+            latency_ms
         )
     )
 
@@ -178,13 +192,19 @@ def run_evaluation(
             "expected_tool": expected_tool,
             "tool_score": tool_score,
             "tool_calls": tool_calls,
-            "semantic_score": semantic_score
+            "semantic_score": semantic_score,
+            "latency_ms": latency_ms
         })
 
     if len(test_cases) > 0:
         accuracy = total_score / len(test_cases)
     else:
         accuracy = 0
+
+    if len(test_cases) > 0:
+        average_latency_ms = total_latency_ms / len(test_cases)
+    else:
+        average_latency_ms = 0
 
     if tool_test_count > 0:
         tool_accuracy = total_tool_score / tool_test_count
@@ -213,5 +233,6 @@ def run_evaluation(
     "accuracy": accuracy,
     "tool_accuracy": tool_accuracy,
     "semantic_accuracy": semantic_accuracy,
+    "average_latency_ms": average_latency_ms,
     "results": results
 }
