@@ -1,5 +1,6 @@
 from agent_tools import cancel_order, get_order_status
 from ollama_agent import run_ollama_agent
+from database import get_database_connection
 
 def run_agent(input_text, agent_version_id):
 
@@ -65,6 +66,35 @@ def run_agent(input_text, agent_version_id):
                     }
                 ]
             }
+
+
+    if agent_version_id >= 4:
+
+        connection = get_database_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT provider, model_name
+            FROM agent_versions
+            WHERE id = ?
+            """,
+            (agent_version_id,)
+        )
+
+        agent_metadata = cursor.fetchone()
+
+        connection.close()
+
+        if agent_metadata is not None:
+            provider = agent_metadata[0]
+            model_name = agent_metadata[1]
+
+            if provider == "ollama":
+                return run_ollama_agent(
+                    input_text,
+                    model_name
+                )
 
     return {
         "output": "I don't know how to handle that request",
