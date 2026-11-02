@@ -461,7 +461,14 @@ def get_evaluation_summary(evaluation_run_id: int):
 
     cursor.execute(
         """
-        SELECT score,tool_score, semantic_score, latency_ms
+        SELECT
+            score,
+            tool_score,
+            semantic_score,
+            latency_ms,
+            prompt_tokens,
+            output_tokens,
+            total_tokens
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -522,6 +529,20 @@ def get_evaluation_summary(evaluation_run_id: int):
     else:
         average_latency_ms = None
 
+    total_prompt_tokens = 0
+    total_output_tokens = 0
+    total_tokens = 0
+
+    for row in rows:
+        if row[4] is not None:
+            total_prompt_tokens += row[4]
+
+        if row[5] is not None:
+            total_output_tokens += row[5]
+
+        if row[6] is not None:
+            total_tokens += row[6]
+
     return {
         "evaluation_run_id": evaluation_run_id,
         "status": evaluation_run[2],
@@ -529,7 +550,10 @@ def get_evaluation_summary(evaluation_run_id: int):
         "accuracy": accuracy,
         "tool_accuracy": tool_accuracy,
         "semantic_accuracy": semantic_accuracy,
-        "average_latency_ms": average_latency_ms
+        "average_latency_ms": average_latency_ms,
+        "prompt_tokens": total_prompt_tokens,
+        "output_tokens": total_output_tokens,
+        "total_tokens": total_tokens,
     }
 
 
