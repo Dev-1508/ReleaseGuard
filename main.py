@@ -729,6 +729,14 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     else:
         latency_improvement_ms = None
 
+    if run_1_average_latency_ms > 0:
+        latency_improvement_percent = (
+            latency_improvement_ms
+            / run_1_average_latency_ms
+        ) * 100
+    else:
+        latency_improvement_percent = None
+
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
 
@@ -802,9 +810,10 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "tool_improvement": tool_improvement,
         "better_run": better_run,
         "deployment_decision": deployment_decision,
-        "latency_improvement_ms": latency_improvement_ms,
         "semantic_improvement": semantic_improvement,
-        "deployment_reason": deployment_reason
+        "deployment_reason": deployment_reason,
+        "latency_improvement_ms": latency_improvement_ms,
+        "latency_improvement_percent": latency_improvement_percent
     }
 
 
