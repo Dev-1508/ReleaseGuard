@@ -765,6 +765,43 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
 
+    cursor.execute(
+    """
+    SELECT provider, model_name
+    FROM agent_versions
+    WHERE id = ?
+    """,
+    (run_1_agent_version,)
+)
+
+    run_1_agent_metadata = cursor.fetchone()
+
+
+    cursor.execute(
+        """
+        SELECT provider, model_name
+        FROM agent_versions
+        WHERE id = ?
+        """,
+        (run_2_agent_version,)
+    )
+
+    run_2_agent_metadata = cursor.fetchone()
+
+    if run_1_agent_metadata is not None:
+        run_1_provider = run_1_agent_metadata[0]
+        run_1_model_name = run_1_agent_metadata[1]
+    else:
+        run_1_provider = None
+        run_1_model_name = None
+
+
+    if run_2_agent_metadata is not None:
+        run_2_provider = run_2_agent_metadata[0]
+        run_2_model_name = run_2_agent_metadata[1]
+    else:
+        run_2_provider = None
+        run_2_model_name = None
 
     if run_2_accuracy > run_1_accuracy:
         better_run = run_id_2
@@ -823,6 +860,9 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_1_tool_accuracy": run_1_tool_accuracy,
         "run_1_semantic_accuracy": run_1_semantic_accuracy,
         "run_1_average_latency_ms": run_1_average_latency_ms,
+        "run_1_provider": run_1_provider,
+        "run_1_model_name": run_1_model_name,
+
 
         "run_2": run_id_2,
         "run_2_agent_version": run_2_agent_version,
@@ -830,6 +870,8 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_2_tool_accuracy": run_2_tool_accuracy,
         "run_2_semantic_accuracy": run_2_semantic_accuracy,
         "run_2_average_latency_ms": run_2_average_latency_ms,
+        "run_2_provider": run_2_provider,
+        "run_2_model_name": run_2_model_name,
 
         "improvement": improvement,
         "tool_improvement": tool_improvement,
