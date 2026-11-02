@@ -84,6 +84,9 @@ def run_evaluation(
     tool_test_count = 0
     total_semantic_score = 0
     semantic_test_count = 0
+    run_prompt_tokens = 0
+    run_output_tokens = 0
+    run_total_tokens = 0
 
     for test_case in test_cases:
         input_text = test_case[1]
@@ -104,6 +107,15 @@ def run_evaluation(
 
         actual_output = agent_result["output"]
         tool_calls = agent_result["tool_calls"]
+        usage = agent_result.get("usage", {})
+
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("output_tokens", 0)
+        total_tokens = usage.get("total_tokens", 0)
+
+        run_prompt_tokens += prompt_tokens
+        run_output_tokens += output_tokens
+        run_total_tokens += total_tokens
 
         score = evaluate_normalized_match(
             expected_output,
@@ -144,9 +156,12 @@ def run_evaluation(
             score,
             tool_score,
             semantic_score,
-            latency_ms
+            latency_ms,
+            prompt_tokens,
+            output_tokens,
+            total_tokens
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             evaluation_run_id,
@@ -155,7 +170,10 @@ def run_evaluation(
             score,
             tool_score,
             semantic_score,
-            latency_ms
+            latency_ms,
+            prompt_tokens,
+            output_tokens,
+            total_tokens
         )
     )
 
@@ -193,7 +211,10 @@ def run_evaluation(
             "tool_score": tool_score,
             "tool_calls": tool_calls,
             "semantic_score": semantic_score,
-            "latency_ms": latency_ms
+            "latency_ms": latency_ms,
+            "prompt_tokens": prompt_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
         })
 
     if len(test_cases) > 0:
@@ -234,5 +255,8 @@ def run_evaluation(
     "tool_accuracy": tool_accuracy,
     "semantic_accuracy": semantic_accuracy,
     "average_latency_ms": average_latency_ms,
-    "results": results
+    "results": results,
+    "prompt_tokens": run_prompt_tokens,
+    "output_tokens": run_output_tokens,
+    "total_tokens": run_total_tokens,
 }

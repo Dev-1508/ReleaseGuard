@@ -160,6 +160,29 @@ def initialize_database():
             "ALTER TABLE agent_versions ADD COLUMN model_name TEXT"
         )
 
+    cursor.execute("PRAGMA table_info(evaluation_results)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "prompt_tokens" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_results ADD COLUMN prompt_tokens INTEGER"
+        )
+
+    if "output_tokens" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_results ADD COLUMN output_tokens INTEGER"
+        )
+
+    if "total_tokens" not in column_names:
+        cursor.execute(
+            "ALTER TABLE evaluation_results ADD COLUMN total_tokens INTEGER"
+        )
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (
     id INTEGER PRIMARY KEY,

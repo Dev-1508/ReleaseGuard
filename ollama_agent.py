@@ -40,6 +40,8 @@ def run_ollama_agent(
         ]
     )
 
+    prompt_tokens = response.prompt_eval_count or 0
+    output_tokens = response.eval_count or 0
 
     tool_calls = []
 
@@ -79,6 +81,11 @@ def run_ollama_agent(
 
 
     return {
-        "output": output,
-        "tool_calls": tool_calls
+    "output": output,
+    "tool_calls": tool_calls,
+    "usage": {
+        "prompt_tokens": prompt_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": prompt_tokens + output_tokens
     }
+}
