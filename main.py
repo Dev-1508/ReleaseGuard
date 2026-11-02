@@ -454,7 +454,7 @@ def get_evaluation_summary(evaluation_run_id: int):
 
     cursor.execute(
         """
-        SELECT score,tool_score, semantic_score
+        SELECT score,tool_score, semantic_score, latency_ms
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -502,13 +502,27 @@ def get_evaluation_summary(evaluation_run_id: int):
     else:
         semantic_accuracy = None
 
+    total_latency_ms = 0
+    latency_count = 0
+
+    for row in rows:
+        if row[3] is not None:
+            total_latency_ms += row[3]
+            latency_count += 1
+
+    if latency_count > 0:
+        average_latency_ms = total_latency_ms / latency_count
+    else:
+        average_latency_ms = None
+
     return {
         "evaluation_run_id": evaluation_run_id,
         "status": evaluation_run[2],
         "total_tests": len(rows),
         "accuracy": accuracy,
         "tool_accuracy": tool_accuracy,
-        "semantic_accuracy": semantic_accuracy
+        "semantic_accuracy": semantic_accuracy,
+        "average_latency_ms": average_latency_ms
     }
 
 
@@ -652,7 +666,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
     cursor.execute(
         """
-        SELECT AVG(score), AVG(tool_score), AVG(semantic_score)
+        SELECT AVG(score), AVG(tool_score), AVG(semantic_score), AVG(latency_ms)
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -664,11 +678,11 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_1_accuracy = run_1_metrics[0]
     run_1_tool_accuracy = run_1_metrics[1]
     run_1_semantic_accuracy = run_1_metrics[2]
-
+    run_1_average_latency_ms = run_1_metrics[3]
 
     cursor.execute(
         """
-        SELECT AVG(score), AVG(tool_score), AVG(semantic_score)
+        SELECT AVG(score), AVG(tool_score), AVG(semantic_score), AVG(latency_ms)
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -680,6 +694,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_2_accuracy = run_2_metrics[0]
     run_2_tool_accuracy = run_2_metrics[1]
     run_2_semantic_accuracy = run_2_metrics[2]
+    run_2_average_latency_ms = run_2_metrics[3]
 
 
     improvement = run_2_accuracy - run_1_accuracy
@@ -702,6 +717,17 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         )
     else:
         semantic_improvement = None
+
+    if (
+    run_1_average_latency_ms is not None
+    and run_2_average_latency_ms is not None
+):
+        latency_improvement_ms = (
+            run_1_average_latency_ms
+            - run_2_average_latency_ms
+        )
+    else:
+        latency_improvement_ms = None
 
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
@@ -763,17 +789,20 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_1_accuracy": run_1_accuracy,
         "run_1_tool_accuracy": run_1_tool_accuracy,
         "run_1_semantic_accuracy": run_1_semantic_accuracy,
+        "run_1_average_latency_ms": run_1_average_latency_ms,
 
         "run_2": run_id_2,
         "run_2_agent_version": run_2_agent_version,
         "run_2_accuracy": run_2_accuracy,
         "run_2_tool_accuracy": run_2_tool_accuracy,
         "run_2_semantic_accuracy": run_2_semantic_accuracy,
+        "run_2_average_latency_ms": run_2_average_latency_ms,
 
         "improvement": improvement,
         "tool_improvement": tool_improvement,
         "better_run": better_run,
         "deployment_decision": deployment_decision,
+        "latency_improvement_ms": latency_improvement_ms,
         "semantic_improvement": semantic_improvement,
         "deployment_reason": deployment_reason
     }
