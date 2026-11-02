@@ -808,6 +808,26 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     else:
         latency_improvement_percent = None
 
+    if (
+    run_1_total_tokens is not None
+    and run_2_total_tokens is not None
+):
+        token_difference = (
+            run_2_total_tokens
+            - run_1_total_tokens
+        )
+
+        if run_1_total_tokens > 0:
+            token_change_percent = (
+                token_difference
+                / run_1_total_tokens
+            ) * 100
+        else:
+            token_change_percent = None
+    else:
+        token_difference = None
+        token_change_percent = None
+
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
 
@@ -934,6 +954,8 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "deployment_reason": deployment_reason,
         "latency_improvement_ms": latency_improvement_ms,
         "latency_improvement_percent": latency_improvement_percent,
+        "token_difference": token_difference,
+        "token_change_percent": token_change_percent,
     }
 
 
