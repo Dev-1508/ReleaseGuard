@@ -1,6 +1,7 @@
 from agent_tools import cancel_order, get_order_status
 from ollama_agent import run_ollama_agent
 from database import get_database_connection
+from provider_router import run_provider_agent
 
 def run_agent(input_text, agent_version_id):
 
@@ -89,6 +90,13 @@ def run_agent(input_text, agent_version_id):
         if agent_metadata is not None:
             provider = agent_metadata[0]
             model_name = agent_metadata[1]
+
+            return run_provider_agent(
+                provider,
+                model_name,
+                input_text
+    )
+    
 
             if provider == "ollama":
                 return run_ollama_agent(
