@@ -43,11 +43,15 @@ class AgentVersion(BaseModel):
     project_id: int
     provider: str | None = None
     model_name: str | None = None
+    input_cost_per_million: float | None = None
+    output_cost_per_million: float | None = None
 
 class AgentVersionUpdate(BaseModel):
     name: str
     provider: str | None = None
     model_name: str | None = None
+    input_cost_per_million: float | None = None
+    output_cost_per_million: float | None = None
 
 
 @app.get("/")
@@ -576,15 +580,19 @@ def create_agent_version(agent_version: AgentVersion):
         name,
         project_id,
         provider,
-        model_name
+        model_name,
+        input_cost_per_million,
+        output_cost_per_million
     )
-    VALUES (?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?)
     """,
     (
         agent_version.name,
         agent_version.project_id,
         agent_version.provider,
-        agent_version.model_name
+        agent_version.model_name,
+        agent_version.input_cost_per_million,
+        agent_version.output_cost_per_million
     )
 )
 
@@ -601,7 +609,9 @@ def create_agent_version(agent_version: AgentVersion):
             "name": agent_version.name,
             "project_id": agent_version.project_id,
             "provider": agent_version.provider,
-            "model_name": agent_version.model_name
+            "model_name": agent_version.model_name,
+            "input_cost_per_million": agent_version.input_cost_per_million,
+            "output_cost_per_million": agent_version.output_cost_per_million,
         },
     }
 
@@ -1082,14 +1092,18 @@ def update_agent_version(
         UPDATE agent_versions
         SET name = ?,
             provider = ?,
-            model_name = ?
+            model_name = ?,
+            input_cost_per_million = ?,
+            output_cost_per_million = ?
         WHERE id = ?
         """,
         (
-            agent_version.name,
-            agent_version.provider,
-            agent_version.model_name,
-            agent_version_id
+                agent_version.name,
+                agent_version.provider,
+                agent_version.model_name,
+                agent_version.input_cost_per_million,
+                agent_version.output_cost_per_million,
+                agent_version_id
         )
     )
 

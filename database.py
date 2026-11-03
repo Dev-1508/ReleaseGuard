@@ -183,6 +183,46 @@ def initialize_database():
             "ALTER TABLE evaluation_results ADD COLUMN total_tokens INTEGER"
         )
 
+    cursor.execute("PRAGMA table_info(agent_versions)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "input_cost_per_million" not in column_names:
+        cursor.execute(
+            """
+            ALTER TABLE agent_versions
+            ADD COLUMN input_cost_per_million REAL
+            """
+        )
+
+    if "output_cost_per_million" not in column_names:
+        cursor.execute(
+            """
+            ALTER TABLE agent_versions
+            ADD COLUMN output_cost_per_million REAL
+            """
+        )
+
+    cursor.execute("PRAGMA table_info(evaluation_results)")
+    columns = cursor.fetchall()
+
+    column_names = []
+
+    for column in columns:
+        column_names.append(column[1])
+
+    if "estimated_cost_usd" not in column_names:
+        cursor.execute(
+            """
+            ALTER TABLE evaluation_results
+            ADD COLUMN estimated_cost_usd REAL
+            """
+        )
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS evaluation_results (
     id INTEGER PRIMARY KEY,

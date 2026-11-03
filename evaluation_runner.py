@@ -19,6 +19,25 @@ def run_evaluation(
     cursor = connection.cursor()
 
     cursor.execute(
+    """
+    SELECT input_cost_per_million,
+           output_cost_per_million
+    FROM agent_versions
+    WHERE id = ?
+    """,
+    (agent_version_id,)
+)
+
+    pricing = cursor.fetchone()
+
+    if pricing is not None:
+        input_cost_per_million = pricing[0] or 0
+        output_cost_per_million = pricing[1] or 0
+    else:
+        input_cost_per_million = 0
+        output_cost_per_million = 0
+
+    cursor.execute(
         "SELECT * FROM test_cases WHERE dataset_id = ?",
         (dataset_id,)
     )
@@ -87,6 +106,7 @@ def run_evaluation(
     run_prompt_tokens = 0
     run_output_tokens = 0
     run_total_tokens = 0
+    run_estimated_cost_usd = 0
 
     for test_case in test_cases:
         input_text = test_case[1]
@@ -112,6 +132,19 @@ def run_evaluation(
         prompt_tokens = usage.get("prompt_tokens", 0)
         output_tokens = usage.get("output_tokens", 0)
         total_tokens = usage.get("total_tokens", 0)
+
+        input_cost = (
+            prompt_tokens
+            / 1_000_000
+        ) * input_cost_per_million
+
+        output_cost = (
+            output_tokens
+            / 1_000_000
+        ) * output_cost_per_million
+
+        estimated_cost_usd = input_cost + output_cost
+        run_estimated_cost_usd += estimated_cost_usd
 
         run_prompt_tokens += prompt_tokens
         run_output_tokens += output_tokens
@@ -159,9 +192,10 @@ def run_evaluation(
             latency_ms,
             prompt_tokens,
             output_tokens,
-            total_tokens
+            total_tokens,
+            estimated_cost_usd
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             evaluation_run_id,
@@ -173,7 +207,8 @@ def run_evaluation(
             latency_ms,
             prompt_tokens,
             output_tokens,
-            total_tokens
+            total_tokens,
+            estimated_cost_usd
         )
     )
 
@@ -215,6 +250,7 @@ def run_evaluation(
             "prompt_tokens": prompt_tokens,
             "output_tokens": output_tokens,
             "total_tokens": total_tokens,
+            "estimated_cost_usd": estimated_cost_usd,
         })
 
     if len(test_cases) > 0:
@@ -259,4 +295,5 @@ def run_evaluation(
     "prompt_tokens": run_prompt_tokens,
     "output_tokens": run_output_tokens,
     "total_tokens": run_total_tokens,
+    "estimated_cost_usd": run_estimated_cost_usd,
 }
