@@ -1,12 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import initialize_database, get_database_connection
-from evaluation_runner import run_evaluation
+from evaluation_runner import (
+    create_evaluation_run_record,
+    run_evaluation_background
+)
 
 app = FastAPI()
 initialize_database()
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 class Project(BaseModel):
     name: str
 
@@ -328,21 +341,36 @@ def get_dataset_test_cases(dataset_id: int):
     return {"test_cases": test_cases}
 
 
-@app.post("/evaluation-runs")
-def create_evaluation_run(evaluation_run: EvaluationRun):
+@app.post("/evaluation-runs", status_code=202)
+def create_evaluation_run(
+    evaluation_run: EvaluationRun,
+    background_tasks: BackgroundTasks
+):
+
     connection = get_database_connection()
     cursor = connection.cursor()
 
-    cursor.execute("SELECT * FROM datasets WHERE id = ?", (evaluation_run.dataset_id,))
+    # Check that the dataset exists
+    cursor.execute(
+        "SELECT * FROM datasets WHERE id = ?",
+        (evaluation_run.dataset_id,)
+    )
 
     dataset = cursor.fetchone()
 
     if dataset is None:
         connection.close()
-        raise HTTPException(status_code=404, detail="Dataset not found")
 
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+
+
+    # Check that the agent version exists
     cursor.execute(
-        "SELECT * FROM agent_versions WHERE id = ?", (evaluation_run.agent_version_id,)
+        "SELECT * FROM agent_versions WHERE id = ?",
+        (evaluation_run.agent_version_id,)
     )
 
     agent_version = cursor.fetchone()
@@ -350,13 +378,35 @@ def create_evaluation_run(evaluation_run: EvaluationRun):
     connection.close()
 
     if agent_version is None:
-        raise HTTPException(status_code=404, detail="Agent version not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Agent version not found"
+        )
 
-    evaluation = run_evaluation(
-        evaluation_run.dataset_id, evaluation_run.agent_version_id, evaluation_run.max_test_cases
+
+    # Create the evaluation run immediately
+    evaluation_run_id = create_evaluation_run_record(
+        evaluation_run.dataset_id,
+        evaluation_run.agent_version_id,
+        evaluation_run.max_test_cases
     )
 
-    return {"message": "Evaluation completed", "evaluation": evaluation}
+
+    # Run the actual evaluation after the HTTP response is returned
+    background_tasks.add_task(
+        run_evaluation_background,
+        evaluation_run_id,
+        evaluation_run.dataset_id,
+        evaluation_run.agent_version_id,
+        evaluation_run.max_test_cases
+    )
+
+
+    return {
+        "message": "Evaluation queued",
+        "evaluation_run_id": evaluation_run_id,
+        "status": "pending"
+    }
 
 
 @app.get("/evaluation-runs/{evaluation_run_id}")
@@ -472,7 +522,8 @@ def get_evaluation_summary(evaluation_run_id: int):
             latency_ms,
             prompt_tokens,
             output_tokens,
-            total_tokens
+            total_tokens,
+            estimated_cost_usd
         FROM evaluation_results
         WHERE evaluation_run_id = ?
         """,
@@ -547,6 +598,12 @@ def get_evaluation_summary(evaluation_run_id: int):
         if row[6] is not None:
             total_tokens += row[6]
 
+    total_estimated_cost_usd = 0
+
+    for row in rows:
+        if row[7] is not None:
+            total_estimated_cost_usd += row[7]
+
     return {
         "evaluation_run_id": evaluation_run_id,
         "status": evaluation_run[2],
@@ -558,6 +615,7 @@ def get_evaluation_summary(evaluation_run_id: int):
         "prompt_tokens": total_prompt_tokens,
         "output_tokens": total_output_tokens,
         "total_tokens": total_tokens,
+        "estimated_cost_usd": total_estimated_cost_usd,
     }
 
 
@@ -724,20 +782,21 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
 
 
     cursor.execute(
-        """
-        SELECT
-            AVG(score),
-            AVG(tool_score),
-            AVG(semantic_score),
-            AVG(latency_ms),
-            SUM(prompt_tokens),
-            SUM(output_tokens),
-            SUM(total_tokens)
-        FROM evaluation_results
-        WHERE evaluation_run_id = ?
-        """,
-        (run_id_1,)
-    )
+    """
+    SELECT
+        AVG(score),
+        AVG(tool_score),
+        AVG(semantic_score),
+        AVG(latency_ms),
+        SUM(prompt_tokens),
+        SUM(output_tokens),
+        SUM(total_tokens),
+        SUM(estimated_cost_usd)
+    FROM evaluation_results
+    WHERE evaluation_run_id = ?
+    """,
+    (run_id_1,)
+)
 
     run_1_metrics = cursor.fetchone()
 
@@ -748,6 +807,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_1_prompt_tokens = run_1_metrics[4]
     run_1_output_tokens = run_1_metrics[5]
     run_1_total_tokens = run_1_metrics[6]
+    run_1_estimated_cost_usd = run_1_metrics[7]
     
 
     cursor.execute(
@@ -759,7 +819,8 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         AVG(latency_ms),
         SUM(prompt_tokens),
         SUM(output_tokens),
-        SUM(total_tokens)
+        SUM(total_tokens),
+        SUM(estimated_cost_usd)
     FROM evaluation_results
     WHERE evaluation_run_id = ?
     """,
@@ -775,6 +836,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     run_2_prompt_tokens = run_2_metrics[4]
     run_2_output_tokens = run_2_metrics[5]
     run_2_total_tokens = run_2_metrics[6]
+    run_2_estimated_cost_usd = run_2_metrics[7]
     
 
 
@@ -837,6 +899,17 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
     else:
         token_difference = None
         token_change_percent = None
+
+    if (
+    run_1_estimated_cost_usd is not None
+    and run_2_estimated_cost_usd is not None
+):
+        cost_difference_usd = (
+            run_2_estimated_cost_usd
+            - run_1_estimated_cost_usd
+        )
+    else:
+        cost_difference_usd = None
 
     run_1_agent_version = run_1[3]
     run_2_agent_version = run_2[3]
@@ -941,6 +1014,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_1_prompt_tokens": run_1_prompt_tokens,
         "run_1_output_tokens": run_1_output_tokens,
         "run_1_total_tokens": run_1_total_tokens,
+        "run_1_estimated_cost_usd": run_1_estimated_cost_usd,
 
 
 
@@ -955,6 +1029,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "run_2_prompt_tokens": run_2_prompt_tokens,
         "run_2_output_tokens": run_2_output_tokens,
         "run_2_total_tokens": run_2_total_tokens,
+        "run_2_estimated_cost_usd": run_2_estimated_cost_usd,
 
         "improvement": improvement,
         "tool_improvement": tool_improvement,
@@ -966,6 +1041,7 @@ def compare_evaluation_runs(run_id_1: int, run_id_2: int):
         "latency_improvement_percent": latency_improvement_percent,
         "token_difference": token_difference,
         "token_change_percent": token_change_percent,
+        "cost_difference_usd": cost_difference_usd,
     }
 
 

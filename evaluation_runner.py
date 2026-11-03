@@ -6,11 +6,86 @@ import json
 import hashlib
 import time
 
+def create_evaluation_run_record(
+    dataset_id,
+    agent_version_id,
+    max_test_cases=None
+):
+    connection = get_database_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT * FROM test_cases
+        WHERE dataset_id = ?
+        ORDER BY id
+        """,
+        (dataset_id,)
+    )
+
+    test_cases = cursor.fetchall()
+
+    if max_test_cases is not None:
+        test_cases = test_cases[:max_test_cases]
+
+    fingerprint_data = []
+
+    for test_case in test_cases:
+        fingerprint_data.append({
+            "id": test_case[0],
+            "input_text": test_case[1],
+            "expected_output": test_case[2],
+            "dataset_id": test_case[3],
+            "expected_tool": test_case[4]
+        })
+
+    fingerprint_text = json.dumps(
+        fingerprint_data,
+        sort_keys=True
+    )
+
+    dataset_fingerprint = hashlib.sha256(
+        fingerprint_text.encode("utf-8")
+    ).hexdigest()
+
+    if max_test_cases is None:
+        run_type = "full"
+    else:
+        run_type = "smoke"
+
+    cursor.execute(
+        """
+        INSERT INTO evaluation_runs (
+            dataset_id,
+            status,
+            agent_version_id,
+            dataset_fingerprint,
+            run_type
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            dataset_id,
+            "pending",
+            agent_version_id,
+            dataset_fingerprint,
+            run_type
+        )
+    )
+
+    connection.commit()
+
+    evaluation_run_id = cursor.lastrowid
+
+    connection.close()
+
+    return evaluation_run_id
 
 def run_evaluation(
     dataset_id,
     agent_version_id,
-    max_test_cases=None
+    max_test_cases=None,
+    evaluation_run_id=None
 ):
 
     total_latency_ms = 0
@@ -47,54 +122,19 @@ def run_evaluation(
     if max_test_cases is not None:
         test_cases = test_cases[:max_test_cases]
 
-    fingerprint_data = []
-
-    for test_case in test_cases:
-        fingerprint_data.append({
-            "id": test_case[0],
-            "input_text": test_case[1],
-            "expected_output": test_case[2],
-            "dataset_id": test_case[3],
-            "expected_tool": test_case[4]
-            })
-
-    fingerprint_text = json.dumps(
-        fingerprint_data,
-        sort_keys=True
-    )
-
-    dataset_fingerprint = hashlib.sha256(
-        fingerprint_text.encode("utf-8")
-    ).hexdigest()
-
-    if max_test_cases is None:
-        run_type = "full"
-    else:
-        run_type = "smoke"
-
     cursor.execute(
-        """
-        INSERT INTO evaluation_runs (
-        dataset_id,
-        status,
-        agent_version_id,
-        dataset_fingerprint,
-        run_type
-        )
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-        dataset_id,
+    """
+    UPDATE evaluation_runs
+    SET status = ?
+    WHERE id = ?
+    """,
+    (
         "running",
-        agent_version_id,
-        dataset_fingerprint,
-        run_type
+        evaluation_run_id
     )
-    )
-    
+)
+
     connection.commit()
-    
-    evaluation_run_id = cursor.lastrowid
 
     results = []
 
@@ -297,3 +337,38 @@ def run_evaluation(
     "total_tokens": run_total_tokens,
     "estimated_cost_usd": run_estimated_cost_usd,
 }
+
+def run_evaluation_background(
+    evaluation_run_id,
+    dataset_id,
+    agent_version_id,
+    max_test_cases=None
+):
+    try:
+        run_evaluation(
+            dataset_id,
+            agent_version_id,
+            max_test_cases,
+            evaluation_run_id
+        )
+
+    except Exception:
+        connection = get_database_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE evaluation_runs
+            SET status = ?
+            WHERE id = ?
+            """,
+            (
+                "failed",
+                evaluation_run_id
+            )
+        )
+
+        connection.commit()
+        connection.close()
+
+        raise
