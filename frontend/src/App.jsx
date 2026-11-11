@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import RunComparison from "./components/RunComparison";
+
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -209,41 +211,22 @@ function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
-          <div className="logo-icon">R</div>
+          <div className="logo-icon" aria-hidden="true"><span /></div>
 
           <div>
             <h2>ReleaseGuard</h2>
-            <span>AI Reliability</span>
+            <span>Evaluation console</span>
           </div>
         </div>
 
-        <nav>
-          <button className="nav-item active">
-            Dashboard
-          </button>
-
-          <button className="nav-item">
-            Projects
-          </button>
-
-          <button className="nav-item">
-            Datasets
-          </button>
-
-          <button className="nav-item">
-            Agent Versions
-          </button>
-
-          <button className="nav-item">
-            Evaluation Runs
-          </button>
-
-          <button className="nav-item">
-            Comparisons
-          </button>
+        <nav aria-label="Dashboard sections">
+          <a className="nav-item active" href="#overview">Overview</a>
+          <a className="nav-item" href="#evaluation">Run evaluation</a>
+          <a className="nav-item" href="#recent-runs">Recent runs</a>
+          <a className="nav-item" href="#comparison">Compare runs</a>
         </nav>
 
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" role="status">
           <div
             className={
               backendStatus === "Connected"
@@ -258,10 +241,10 @@ function App() {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" id="overview">
         <header className="topbar">
           <div>
-            <h1>Dashboard</h1>
+            <h1>Evaluation overview</h1>
             <p>
               Monitor AI agent quality and release readiness.
             </p>
@@ -275,7 +258,7 @@ function App() {
           </button>
         </header>
 
-            <section className="evaluation-launcher">
+            <section className="evaluation-launcher" id="evaluation">
   <div>
     <h2>Run Evaluation</h2>
 
@@ -287,10 +270,10 @@ function App() {
 
   <div className="evaluation-controls">
     <div className="control-group">
-      <label>Agent Version</label>
+      <label htmlFor="agent-version">Agent Version</label>
 
       <select
-        value={selectedVersion}
+        id="agent-version" value={selectedVersion}
         onChange={(event) =>
           setSelectedVersion(event.target.value)
         }
@@ -306,10 +289,10 @@ function App() {
     </div>
 
     <div className="control-group">
-      <label>Test Cases</label>
+      <label htmlFor="test-count">Test Cases</label>
 
       <select
-        value={testCount}
+        id="test-count" value={testCount}
         onChange={(event) =>
           setTestCount(event.target.value)
         }
@@ -338,7 +321,7 @@ function App() {
   </div>
 
   {activeRun && (
-    <div className="active-run">
+    <div className="active-run" role="status">
       <div>
         <span>Run</span>
         <strong>#{activeRun}</strong>
@@ -357,7 +340,11 @@ function App() {
           </div>
         ) : (
           <>
-            <section className="metrics-grid">
+            <section className="metrics" aria-labelledby="metrics-heading">
+              <header className="metrics-header">
+                <h2 id="metrics-heading">Latest completed run</h2>
+              </header>
+              <div className="metrics-grid">
               <MetricCard
                 title="Response Accuracy"
                 value={formatPercent(
@@ -382,6 +369,8 @@ function App() {
                 description="Meaning-level correctness"
               />
 
+              </div>
+              <div className="metrics-grid secondary-metrics">
               <MetricCard
                 title="Average Latency"
                 value={formatLatency(
@@ -406,9 +395,9 @@ function App() {
                 )}
                 description="Estimated run cost"
               />
-            </section>
+            </div></section>
 
-            <section className="panel">
+            <section className="panel" id="recent-runs">
               <div className="panel-header">
                 <div>
                   <h2>Recent Evaluation Runs</h2>
@@ -493,6 +482,9 @@ function App() {
                 </div>
               )}
             </section>
+            
+            <RunComparison runs={runs} />
+
           </>
         )}
       </main>
@@ -511,7 +503,7 @@ function MetricCard({
         {title}
       </p>
 
-      <h2>{value}</h2>
+      <strong className="metric-value">{value}</strong>
 
       <span>{description}</span>
     </div>
