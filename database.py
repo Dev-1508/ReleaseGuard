@@ -1,8 +1,14 @@
+import os
 import sqlite3
 
 
+DATABASE_PATH = os.getenv(
+    "DATABASE_PATH",
+    "releaseguard.db"
+)
+
 def initialize_database():
-    connection = sqlite3.connect("releaseguard.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
 
     cursor.execute("""
@@ -251,5 +257,5 @@ def initialize_database():
     connection.close()
 
 def get_database_connection():
-    connection = sqlite3.connect("releaseguard.db")
+    connection = sqlite3.connect(DATABASE_PATH)
     return connection

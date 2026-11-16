@@ -3,7 +3,9 @@ import "./App.css";
 import RunComparison from "./components/RunComparison";
 
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
