@@ -1,7 +1,15 @@
-from ollama import chat
-
+from ollama import Client
+import os
 from agent_tools import cancel_order, get_order_status
 
+OLLAMA_HOST = os.getenv(
+    "OLLAMA_HOST",
+    "http://localhost:11434"
+)
+
+ollama_client = Client(
+    host=OLLAMA_HOST
+)
 
 def run_ollama_agent(
     input_text,
@@ -31,7 +39,7 @@ def run_ollama_agent(
     }
 
 
-    response = chat(
+    response = ollama_client.chat(
         model=model_name,
         messages=messages,
         tools=[
