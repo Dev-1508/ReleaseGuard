@@ -85,7 +85,6 @@ docs/images/dashboard.png
 
 Example:
 
-```markdown
 ## Screenshots
 
 ### Dashboard
@@ -103,7 +102,7 @@ Example:
 ### Automated Tests
 
 ![Automated Tests](docs/images/tests.png)
-```
+
 
 ---
 
