@@ -86,7 +86,23 @@ docs/images/dashboard.png
 Example:
 
 ```markdown
+## Screenshots
+
+### Dashboard
+
 ![ReleaseGuard Dashboard](docs/images/dashboard.png)
+
+### Running an Evaluation
+
+![Evaluation Run](docs/images/evaluation-run.png)
+
+### Model Comparison and Deployment Gate
+
+![Run Comparison](docs/images/comparison.png)
+
+### Automated Tests
+
+![Automated Tests](docs/images/tests.png)
 ```
 
 ---
